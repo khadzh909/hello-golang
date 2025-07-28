@@ -1,11 +1,13 @@
 name: golang-pipeline
-on: push
+#Когда запускать workflow.
+on: push #Это значит: запускать при каждом git push в репозиторий.
 jobs:
   test:
     runs-on: ubuntu-latest
     container: golang:1.24
     steps:
-      - uses: actions/checkout@v4
+      #стандартный шаг, чтобы склонировать твой репозиторий в среду CI.
+      - uses: actions/checkout@v4 # Это как подключить готовый шаг от кого-то другого
 
       - name: Run Unit Tests
         run: GOOS=linux GOARCH=amd64 go test
@@ -17,18 +19,19 @@ jobs:
   deploy:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
-    #Задание deploy запустится только после успешного завершения задания test.
+    #означает, что deploy запустится только после успешного выполнения test.
     needs: test
+    #условие: запускать deploy только если был пуш тега (например, v1.0.0), а не просто коммит.
     if: startsWith(github.ref, 'refs/tags')
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 #GitHub скачает код репозитория
 
       - name: Set up Docker buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3 #Залогиниться в Docke
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
@@ -41,8 +44,12 @@ jobs:
 
       - name: Build and push Docker Image
         uses: docker/build-push-action@v5
+        #это способ передать параметры в GitHub Action. Как аргументы функции.
         with:
+          #Контекст сборки Docker (текущая папка)
           context: .
+          #После сборки образ будет отправлен в Docker Hub
           push: true
+          #Теги, которые сгенерировал шаг meta
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
